@@ -1,0 +1,146 @@
+<html>
+<head>
+<script type="text/javascript" src="js/angular.min.js"></script>
+<script type="text/javascript" src="js/invoiceCollector.js"></script>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.5/css/bootstrap.min.css">
+</head>
+<body data-ng-app="invoiceCollector" data-ng-controller="invoiceCollectorInitializationController" data-ng-init="init()">
+    <div class="container" data-ng-controller="invoiceCollectorNavigationController">
+        <ul class="nav nav-tabs">
+            <li role="presentation" data-ng-class="{'active': app == 'addInvoice'}"><a data-ng-click="setApp('addInvoice')">Add new invoice</a></li>
+            <li role="presentation" data-ng-class="{'active': app == 'listInvoice'}"><a data-ng-click="setApp('listInvoice')">List invoice</a></li>
+        </ul>
+        <div class="row" data-ng-controller="invoiceListController" data-ng-if="app == 'listInvoice'">
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                <div class="form-group">
+                    <label for="payfilter">Pay filter:
+                        <select class="form-control" name="payfilter" id="payfilter" data-ng-model="selectedPayFilterType"
+                            data-ng-change="setFilterName(selectedPayFilterType, 'datefilter')">
+                            <option value="">All</option>
+                            <option value="payed">Payed</option>
+                            <option value="unpayed">Unpayed</option>
+                        </select>
+                    </label>
+                    <label for="providerfilter">Provider filter:
+                        <select class="form-control" name="providerfilter" id="providerfilter" data-ng-model="selectedProviderFilterType"
+                            data-ng-options="i.id as i.label for i in invoiceProviders"
+                            data-ng-change="setFilterName(selectedProviderFilterType, 'providerfilter')">
+                            <option value="">All</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="form-group">
+                </div>
+            </div>
+            <div class="col-md-12 col-sm-12 col-xs-12">
+                List invoices
+                <table class="table table-bordered table-hover">
+                    <tr>
+                        <th data-ng-click="setOrderObject('providerId')"
+                            data-ng-class="{'active': orderObject['name'] == 'providerId'}">
+                            Provider Name
+                            <span class="glyphicon" data-ng-class="orderObject['reverse'] ? 'glyphicon-sort-by-alphabet-alt':'glyphicon-sort-by-alphabet'" data-ng-if="orderObject['name'] == 'providerId'"></span>
+                        </th>
+                        <th data-ng-click="setOrderObject('arriveDate')"
+                            data-ng-class="{'active': orderObject['name'] == 'arriveDate'}">
+                            Arrive Date
+                            <span class="glyphicon" data-ng-class="orderObject['reverse'] ? 'glyphicon-sort-by-alphabet-alt':'glyphicon-sort-by-alphabet'" data-ng-if="orderObject['name'] == 'arriveDate'"></span>
+                        </th>
+                        <th data-ng-click="setOrderObject('validDate')"
+                            data-ng-class="{'active': orderObject['name'] == 'validDate'}">
+                            Valid Date
+                            <span class="glyphicon" data-ng-class="orderObject['reverse'] ? 'glyphicon-sort-by-alphabet-alt':'glyphicon-sort-by-alphabet'" data-ng-if="orderObject['name'] == 'validDate'"></span>
+                        </th>
+                        <th data-ng-click="setOrderObject('payedDate')"
+                            data-ng-class="{'active': orderObject['name'] == 'payedDate'}">
+                            Payed Date
+                            <span class="glyphicon" data-ng-class="orderObject['reverse'] ? 'glyphicon-sort-by-alphabet-alt':'glyphicon-sort-by-alphabet'" data-ng-if="orderObject['name'] == 'payedDate'"></span>
+                        </th>
+                        <th data-ng-click="setOrderObject('amount')"
+                            data-ng-class="{'active': orderObject['name'] == 'amount'}">
+                            Amount
+                            <span class="glyphicon" data-ng-class="orderObject['reverse'] ? 'glyphicon-sort-by-alphabet-alt':'glyphicon-sort-by-alphabet'" data-ng-if="orderObject['name'] == 'amount'"></span>
+                        </th>
+                    </tr>
+                    <tr data-ng-repeat="inv in invoices | dateFilter:orderObject['filter']['datefilter'] | nameFilter:orderObject['filter']['providerfilter'] |orderBy:orderObject['name']:orderObject['reverse']" data-ng-class="{'success' : inv['payedDate'] != '', 'danger': (inv['payedDate'] == '' && showDangerLabel(inv['validDate']))}">
+                        <td>
+                            <span>{{getInvoiceProviderById(inv['providerId'])['label']}}</span>
+                        </td>
+                        <td>{{getDateString(inv['arriveDate'])}}</td>
+                        <td>{{getDateString(inv['validDate'])}}</td>
+                        <td>{{getDateString(inv['payedDate'])}}</td>
+                        <td data-ng-bind="inv['amount']"></td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+        <div class="row" data-ng-controller="invoiceCollectorController" data-ng-init="init()" data-ng-if="app == 'addInvoice'">
+            <div data-ng-class="{'col-md-12 col-sm-12 col-xs-12' : selectedProvider == '', 'col-md-6 col-sm-6 col-xs-12' : selectedProvider != ''}">
+                <div class="col-sm-12 col-md-12 col-xs-12">
+                    <div class="form-group">
+                        <label for="providerselector">Provider:</label>
+                        <select class="form-control" name="providerselector" id="providerselector" data-ng-model="selectedProviderId"
+                            data-ng-options="i.id as i.label for i in invoiceProviders"
+                            data-ng-change="updateSelectedProvider(selectedProviderId)">
+                            <option value="">Choose</option>
+                        </select>
+                    </div>
+                </div>
+                <div data-ng-if="selectedProvider != ''">
+                    <div class="col-sm-12 col-md-6 col-xs-12">
+                        <div class="form-group">
+                            <label for="arrivedate">Arrive</label>
+                            <input type="date" name="arrivedate" data-ng-model="invoiceObject['arriveDate']" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-6 col-xs-12">
+                        <div class="form-group">
+                            <label for="validdate">Valid to</label>
+                            <input type="date" name="validdate" data-ng-model="invoiceObject['validDate']" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-12 col-xs-12">
+                        <div class="form-group">
+                            <label for="invoiceid">Invoice id</label>
+                            <input type="text" name="invoiceid" data-ng-model="invoiceObject['invoiceId']" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-6 col-xs-12">
+                        <div class="form-group">
+                            <label for="payeddate">Payed</label>
+                            <input type="date" name="payeddate" data-ng-model="invoiceObject['payedDate']" class="form-control" />
+                        </div>
+                    </div>
+                    <div class="col-sm-12 col-md-6 col-xs-12">
+                        <div class="form-group">
+                            <label for="payeddate">Amount</label>
+                            <div class="input-group">
+                                <input type="number" name="amount" data-ng-model="invoiceObject['amount']" class="form-control" placeholder="Amount" />
+                                <span class="input-group-addon">HUF</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div data-ng-class="{'hidden' : selectedProvider == '', 'col-md-6 col-sm-6 col-xs-12' : selectedProvider != ''}">
+                <div class="panel panel-primary">
+                    <div class="panel-heading">
+                        <span data-ng-bind="selectedProvider['label']"></span>
+                    </div>
+                    <div class="panel-body">
+                        <div class="table-responsive">
+                            <table class="table">
+                                <tr data-ng-repeat="d in selectedProvider['details']">
+                                    <td data-ng-bind="d['label']"></td>
+                                    <td data-ng-bind="d['value']"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
+
